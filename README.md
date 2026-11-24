@@ -1,41 +1,5 @@
 # FTEC5660 Homework 4
 
-Retrieval for RAG over company reports. The implementation uses lexical BM25 retrieval, document metadata, and the provided DeepSeek generator. No embedding model or external data source is used.
-
-## Setup and execution
-
-Requires Python 3.10 or later and a DeepSeek API key.
-
-```bash
-python -m venv .venv
-```
-
-Activate the environment on Windows PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-Or on macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-Create a local `.env` file containing `DEEPSEEK_API_KEY=your_key_here`, using your own key. This file is ignored by Git. Then run:
-
-```bash
-python hw4.py --data-folder public_test --output results.csv
-```
-
-Each run rebuilds its index from the supplied corpus. No prebuilt index is required or committed. Leave `HW4_VARIANT` unset for the final system and `HW4_LLM` unset (or set to `1`) to enable the query parser and evidence selector. The default internal switch is named `V7`; this is the full system and corresponds to **V10 in the external ablation table**, not to that table's V7 row. The ablation script translates the original internal switches into the separate cumulative stages below.
-
 ## Homework 4 solution
 
 ### Pipeline
@@ -64,20 +28,6 @@ flowchart TD
 
 BeautifulSoup extracts document identity and section structure. `table_to_text` expands row/column relationships, preserves the caption and units, and handles spanning cells so that values remain attached to their labels. `chunk_document` groups prose by section and keeps tables separate, repeating captions when a table is divided; a final character-based splitter respects the 1,500-character limit, including the header. Chunks carry source, company, fiscal year and document type, with additional section/table metadata and broker/report identity for research reports. `build_index` creates BM25 over lowercased, normalised tokens with stop-word removal and simple plural normalisation. Query parsing combines rules with the allowed LLM; exact company/type filtering prevents similarly named entities from being mixed, while year filtering accounts for prior-year annual-report columns and forward-looking guidance/forecasts. The lexical ranking query removes company/year terms and expands financial synonyms. The full system reserves an initial slot per requested company, gathers a small candidate pool, and asks the allowed LLM to select existing passage IDs and check answerability. Unknown companies, unsupported periods and insufficient evidence lead to `[]`. Returned text is always an original chunk; the provided generator, prompt and scoring code are unchanged. These choices aim to preserve exact financial evidence while preventing wrong-company, wrong-year and unsupported answers.
 
-### Experimental protocol and reproducibility
-
-The public evaluation contains 40 documents for 10 fictional companies and 60 questions: 12 fact, 22 table, 12 comparison and 14 unanswerable. Recall@5 and Kept use the 46 answerable questions as their denominator; Rejected uses the 14 unanswerable questions; Accuracy uses all 60. Recall@5 requires evidence for every fact needed by a question. Kept measures whether retrieval returns chunks, whereas Rejected measures whether retrieval returns `[]`; the generator can also answer NOT_FOUND after receiving irrelevant chunks, so answer accuracy and retrieval abstention are different metrics.
-
-Run the cumulative ablations from the repository root:
-
-```bash
-python ablation_single_component.py --data-folder public_test
-```
-
-The script runs B0 through V10 in separate processes, reusing the provided generator, runner and scoring functions. It changes the student-function switches in memory through an AST transformation; it does not edit `hw4.py`. B0 uses BeautifulSoup `get_text`, recursive splitting, required metadata, and corpus-wide BM25 top-5 with lowercase whitespace tokens; it does not use query parsing for retrieval and never deliberately abstains. Every subsequent row enables one additional switch or changes one component relative to the preceding row. Query parsing is still evaluated by the original runner in baseline runs, even when its output is not used for retrieval. V4 also rejects empty company/type/year candidate sets as a consequence of filtering; V10 adds the evidence selector's answerability rejection.
-
-Results are saved in `ablation_single_results/`: per-variant logs and results CSVs, `summary.csv`, `errors.csv`, and `table.md`. The script copies V10's results exactly to the root `results.csv`. The committed table below describes the recorded full run, rather than an average or a confidence interval. All 11 recorded variants finished without logged fallback errors in 51.5-95.5 seconds each, within the 30-minute limit. A hosted model may vary between runs even at temperature zero, so small differences must not automatically be attributed to the newly enabled component.
-
 ### Cumulative ablation results
 
 | Variant | Only change from previous row | Recall@5 | Kept | Rejected | Accuracy |
@@ -94,7 +44,7 @@ Results are saved in `ablation_single_results/`: per-variant logs and results CS
 | V9 | Add LLM reranking | 97.8% | 97.8% | 71.4% | 96.7% |
 | V10 | Apply the reranker answerability decision | 100.0% | 100.0% | 100.0% | 98.3% |
 
-The table is generated from the committed per-question CSVs. The final V10 run achieved 59/60 correct answers, 46/46 evidence hits, 46/46 answerable questions retained, and 14/14 unanswerable questions rejected. Its table-conversion, chunking, valid-retrieval and query-parsing checks were all 100%. Runtime was 94.4 seconds. The public runner estimated 74.67/75 for Tasks 1-4; this is not a prediction of the private-set grade.
+The table reports one run on public_test and is generated from the saved per-question CSVs. Recall@5 and Kept are measured over the 46 answerable questions, Rejected over the 14 unanswerable questions, and Accuracy over all 60. The final V10 run achieved 59/60 correct answers, 46/46 evidence hits, 46/46 answerable questions retained, and 14/14 unanswerable questions rejected.
 
 ### Analysis of each change
 
@@ -119,10 +69,6 @@ Although V8 had perfect answer accuracy in this public run, its retrieval reject
 
 The final category accuracies were 12/12 fact, 22/22 table, 11/12 comparison and 14/14 unanswerable. These findings suggest prioritising precise row/year presentation and robust entity parsing over adding complexity solely to raise public-set scores.
 
-### Fresh-clone execution check
-
-A separate run from a fresh GitHub clone, with the submission files copied in and no saved index, completed in 98.1 seconds. It processed all 60 questions with valid retrieval and no empty answers or logged fallbacks; 58/60 answers were correct. It reused the installed Python environment. The log and per-question results are in validation/. This check is recorded separately and does not replace the V10 ablation results above. The change from 59/60 to 58/60 is further evidence of run-to-run model variation.
-
 ## Task 6: Reflection
 
 If AI agents become good at most of the work I am studying for, I would still want to be someone who understands the decisions being made. Getting a useful answer is valuable, but I would not feel comfortable approving a financial decision just because an agent gave a confident explanation. I want to know enough to ask a second question, notice when something does not add up, and explain my choice to the person affected by it.
@@ -136,3 +82,4 @@ This homework makes that distinction quite concrete. A recall score of 100% look
 I think domain knowledge, clear communication and the willingness to admit uncertainty would still matter. So would experience working with people whose needs differ from mine. If I define myself only by the tasks I can complete, every improvement in AI becomes a threat. I would rather define myself partly by the choices I make: what I give my attention to, which responsibilities I accept, and how I behave when nobody is checking the result. I do not need to outperform an agent at every task for those choices to have value.
 
 Starting tomorrow, I would make one practical change to how I study: before asking for a finished solution, write down my own approach and one thing I am unsure about. Then use AI to test that approach, rather than simply replace it. For important outputs, I would check a small number of concrete cases and keep a short record of mistakes. I would also keep time away from coursework and tools, because health and relationships should not become whatever is left after the work is done.
+

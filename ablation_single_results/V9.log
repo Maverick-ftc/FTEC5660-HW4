@@ -1,0 +1,32 @@
+40 documents, 60 questions
+
+Task 1.1 table_to_text: 100.0% of the table cells kept with their labels
+Task 1.2 chunk_document: 100.0% of the documents pass
+1125 chunks to index
+Index built in 49.4s | {'llm_calls': 60, 'llm_input_tokens': 7495, 'llm_output_tokens': 1502, 'cost_usd': 0.002}
+Wrote C:\Users\user\PycharmProjects\FTEC5660-HW4\ablation_single_results\V9_results.csv
+Task 2.1 valid, non-empty retrieval on answerable questions: 97.8%
+Task 2.2 parse_query fields right: 99.4%
+Task 2.3 retrieval recall@5 on answerable questions: 97.8%
+Task 3   answerable questions with chunks: 97.8% | unanswerable questions with []: 71.4%
+Task 4   answer accuracy: 96.7%
+
+By category       accuracy   recall
+  comparison        91.7%   100.0%
+  fact              91.7%    91.7%
+  table            100.0%   100.0%
+  unanswerable     100.0%        -
+
+Estimated points (the grade uses the private set):
+  Task 1.1   8.00 / 8
+  Task 1.2   7.00 / 7
+  Task 2.1   4.89 / 5
+  Task 2.2   9.94 / 10
+  Task 2.3  15.00 / 15
+  Task 3     6.93 / 10
+  Task 4    19.33 / 20
+  Total     71.09 / 75
+
+Your usage: {'llm_calls': 109, 'llm_input_tokens': 102961, 'llm_output_tokens': 2206, 'cost_usd': 0.0168}
+Generator usage: {'llm_calls': 49, 'llm_input_tokens': 32579, 'llm_output_tokens': 157, 'cost_usd': 0.005}
+Time: 95.5s (index 49.4s, retrieval 40.8s)
